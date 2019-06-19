@@ -1,0 +1,67 @@
+---
+- hosts: laptop
+  tasks:
+   - name: update all packages to their latest state
+     yum:
+      name: '*'
+      state: latest
+   - name: install a list of packages
+     yum:
+      name: "{{ packages }}"
+      state: latest
+     vars:
+       packages:
+       - git
+       - fail2ban
+       - firewalld
+       - docker 
+       - docker-compose
+       - nginx 
+       - python3-devel
+       - mysql-devel
+   - name: import Sublime Text 3 GPG key
+     rpm_key:
+       state: present
+       key: https://download.sublimetext.com/sublimehq-rpm-pub.gpg
+   - name: Add Sublime Text 3 repository
+     yum_repository:
+       name: sublime-text
+       description: sublime-text text editor repository
+       baseurl: https://download.sublimetext.com/rpm/stable/x86_64/sublime-text.repo
+   - name: Install sublime-text
+     yum:
+       name: sublime-text
+       state: latest
+   - name: open ssh, http(s) ports on firewall
+     firewalld:
+       service: ssh
+       permanent: yes
+       state: enabled
+     firewalld:  
+       service: http
+       permanent: yes
+       state: enabled
+     firewalld:
+       service: https
+       permanent: yes
+       state: enabled
+     firewalld:
+       service: gre
+       permanent: yes
+       state: enabled
+   - name: install VLC snap
+     snap:
+       name: vlc
+   - name: install Bitwarden snap
+     snap:
+       name: bitwarden
+   - name: install atom snap
+     snap: 
+      name: atom
+      classic: yes
+   - name: install visual studio code snap 
+     snap: 
+      name: code
+      classic: yes
+   - name: update user python pip to latest with script
+     script: /home/vincentb/Documents/scripts/upgrade_user_pip.sh
