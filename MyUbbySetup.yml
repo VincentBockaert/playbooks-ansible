@@ -1,0 +1,94 @@
+---
+- name: my personal ubuntu setup
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: apt | update
+      apt:
+        update_cache: 'yes'
+    
+    - name: Upgrade installed packages to latest versions
+      apt:
+        name: '*'
+        state: latest
+      
+    - name: development packages git, sqlite3, python3-dev | install
+      apt:
+        update_cache: 'yes'
+        name: ['git', 'python3-dev', 'sqlite3']
+        state: latest
+        install_recommends: yes
+       
+    - name: Docker | Add the required apt packages
+      apt:
+        name: ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg-agent', 'software-properties-common']
+        state: present
+        
+    - name: Docker | Add the official GPG key from Docker
+      apt_key:
+        id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+        url: https://download.docker.com/linux/ubuntu/gpg
+        validate_certs: yes
+        state: present
+        
+    - name: Docker | Add the Docker repositories
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Docker | Install Docker Engine
+      apt: 
+        name: ['docker-ce','docker-ce-cli','containerd.io']
+        state: latest
+
+    - name: Docker | Enable and start the Docker daemon
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: yubikey | packages install
+      apt:
+        name: ['yubikey-personalization','yubikey-personalization-gui','yubikey-luks','yubico-piv-tool','scdaemon']
+        state: latest
+
+    - name: brave dependencies | install
+      apt:
+        name: ['apt-transport-https','curl']
+        state: latest
+
+    - name: brave | apt-key
+      apt_key:
+        url: https://brave-browser-apt-release.s3.brave.com/brave-core.asc
+        state: present
+
+    - name: brave | apt-repo
+      apt_repository:
+        repo: deb [arch=amd64] https://brave-browser-apt-release.s3.brave.com/ stable main
+        state: present
+        filename: brave-browser-release.list
+
+    - name: brave | install 
+      apt:
+        name: ['brave-browser']
+        state: latest
+        
+    - name: snapd install nodejs with npm as package manager
+      snap:
+        name: node
+        channel: 14/stable
+        classic: yes
+    
+    - name: Spotify | Install the snap app
+      snap:
+        name: spotify
+        state: present
+
+    - name: VSCode | Install the snap app
+      snap:
+        name: code
+        state: present
+        classic: yes
+       
+    - debug: var=ansible_facts
+    
