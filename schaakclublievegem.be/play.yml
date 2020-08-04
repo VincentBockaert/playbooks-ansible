@@ -1,0 +1,150 @@
+---
+#
+# Playbook targeting only the 'web' group
+#
+
+- name: chess webserver config
+  hosts: web
+  tasks:
+  - include_vars: 
+      dir: group_vars/web
+      extensions:
+        - yml
+        - yaml  
+  - name: apt | update
+    apt:
+      update_cache: 'yes'
+      name: '*'
+      state: latest
+
+  - name: apt | fail2ban
+    apt:
+      name: 'fail2ban'
+      state: latest
+      install_recommends: 'yes'
+    notify:
+    - failban | config
+    - start and enable fail2ban
+     
+#  - name: apt | apache2
+#    apt:
+#      name: ['apache2']
+#      state: latest
+#      install_recommends: 'yes'
+#    notify:
+#    - start and enable apache
+#    - ufw | http_port
+#    - ufw | https_port
+      
+#  - name: apt | php
+#    apt: 
+#      name: ['php','php-mysql']
+#      state: latest
+#      install_recommends: 'yes'
+  
+  - name: apt | git
+    apt: 
+      name: git
+      state: latest
+  
+  handlers:
+  - name: start and enable fail2ban
+    service:
+      name: fail2ban
+      state: restart
+      enabled: 'yes'
+  - name: fail2ban | config
+    copy:
+      src: ./files/jail.local
+      dest: /etc/fail2ban/jail.local
+      owner: root
+      group: root
+      mode: '0644'
+  - name: start and enable apache
+    service:
+      name: apache2
+      state: restart
+      enabled: 'yes'
+  - name: ufw | https_port
+    ufw:
+      rule: allow
+      port: '{{ https_port }}'
+      proto: tcp
+  - name: ufw | http_port
+    ufw:
+      rule: allow
+      port: '{{ http_port }}'
+      proto: tcp
+
+#
+# Playbook targeting only the 'db' group
+#
+
+- name: install db requirements
+  hosts: db
+  tasks:
+  - name: apt | python goodies # required for sane install of pip
+    apt:
+      name: ['python3-pip','python3-venv','python3-dev', 'python-pip', 'python-dev']
+      state: latest
+  - name: pip | pymysql
+    pip:
+      name: pymysql
+
+#
+# Playbook targeting both the 'web' and 'db' group
+#
+
+- name: get backups | db | website code
+  hosts: web:db
+  tasks:
+  - include_vars: 
+      dir: group_vars/db
+      extensions:
+        - yml
+        - yaml
+  - name: archive | /var/www 
+    archive:
+      path: /var/www
+      dest: "{{ remote_home }}/web.tgz"
+      force_archive: 'true'
+    notify: 
+    - fetch | archive /var/www
+    - remove | archive
+  
+  - name: mysql | dump
+    mysql_db:
+      state: dump
+      name: wsvdb
+      login_user: "{{ mysql_user }}"
+      login_password: "{{ mysql_password }}"
+      target: "{{ remote_home }}/backupWSVDB.sql"
+    notify: # on success calls the fetch handler to also download and remove the backup file
+    - fetch | mysqldump
+    - remove | mysqldump
+  
+  handlers:
+  - name: fetch | archive /var/www
+    fetch: 
+      src: "{{ remote_home }}/web.tgz"
+      dest: "{{ local_home }}/web.tgz"
+      flat: 'yes'
+  # remove the archive from the web server
+  - name: remove | archive
+    file:
+      path: "{{ remote_home }}/web.tgz"
+      state: absent
+  # downloads the backed up sql dump
+  - name: fetch | mysqldump
+    fetch:
+      src: "{{ remote_home }}/backupWSVDB.sql"
+      dest: "{{ local_home }}/backupWSVDB.sql"
+      flat: 'yes'
+  # removes the mysqldump from the server
+  - name: remove | mysqldump
+    file:
+      path: "{{ remote_home }}/backupWSVDB.sql"
+      state: absent
+  
+
+      
