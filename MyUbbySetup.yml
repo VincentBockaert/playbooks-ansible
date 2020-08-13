@@ -12,12 +12,17 @@
         name: '*'
         state: latest
       
-    - name: development packages git, sqlite3, python3-dev | install
+    - name: Common development packages git | install
       apt:
         update_cache: 'yes'
         name: ['git', 'python3-dev', 'sqlite3']
         state: latest
         install_recommends: yes
+    
+    - name: Java | install
+      apt:
+        name: ['default-jdk','default-jre']
+        state: latest
        
     - name: Docker | Add the required apt packages
       apt:
