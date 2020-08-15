@@ -2,6 +2,7 @@
 - name: my personal ubuntu setup
   hosts: localhost
   connection: local
+  become: yes
   tasks:
     - name: apt | update
       apt:
@@ -56,6 +57,10 @@
       apt:
         name: ['yubikey-personalization','yubikey-personalization-gui','yubikey-luks','yubico-piv-tool','scdaemon']
         state: latest
+
+    - name: pgp import the public key for work | vincent.bockaert@unifiedpost.com
+      shell: gpg --keyserver keys.openpgp.org --recv-keys D4E703B24711B296D2C71EE229FCCC46E439CE22
+      become: no
 
     - name: brave dependencies | install
       apt:
